@@ -164,32 +164,9 @@ Forecast <- function(id) {
           output$boxplot_region <- renderPlotly(show_box_region(df_vis, region_calc))
           
           # draw value boxes ----
+          output$price_comparison_box_total <- renderValueBox(show_price_comparison_box_total(df_vis, corrected_price))
           
-          #browser()
-          
-          warsaw_perc <- round(length(df_vis$y[df_vis$y<corrected_price])/length(df_vis$y)*100, 2)
-          prices_restricted <- df_vis %>% filter(region == region_calc) %>% .$y
-          region_perc <- round(length(prices_restricted[prices_restricted<corrected_price])/length(prices_restricted)*100, 2)
-          icon_warsaw <- ifelse(warsaw_perc > 60, 'balance-scale-left', ifelse(warsaw_perc < 40, 'balance-scale-right', 'balance-scale'))
-          icon_region <- ifelse(region_perc > 60, 'balance-scale-left', ifelse(region_perc < 40, 'balance-scale-right', 'balance-scale'))
-          
-          output$price_comparison_box_total <- renderValueBox({
-            valueBox(
-              value = paste0(warsaw_perc, '%'),
-              subtitle = 'of flats in Warsaw costs less then the selected property',
-              icon = icon(icon_warsaw),
-              color = 'light-blue'
-            )
-          })
-          
-          output$price_comparison_box <- renderValueBox({
-            valueBox(
-              value = paste0(region_perc, '%'),
-              subtitle = glue::glue('of flats in {str_replace(region_calc, "_", " ")} costs less then the selected property'),
-              icon = icon(icon_region),
-              color = 'light-blue'
-            )
-          })
+          output$price_comparison_box <- renderValueBox(show_price_comparison_box(df_vis, corrected_price, region_calc))
           
           output$price_box <- renderValueBox({
             valueBox(
@@ -199,6 +176,7 @@ Forecast <- function(id) {
               color = 'blue'
             )
           })
+          
           output$price_box_total <- renderValueBox({
             valueBox(
               value = paste0(format(corrected_price*isolate(input$area), big.mark = " "), ' zl'),
@@ -207,6 +185,12 @@ Forecast <- function(id) {
               color = 'blue'
             )
           })
+          
+          # list objects ----
+          output$object_dists <- renderDataTable(clear_dists(flat))
+          
+          output$object_counts <- renderDataTable(clear_counts(flat))
+          
         }
         # finalization ----
         updateProgressBar(session = session, id = 'progress_bar', value = 100, title = 'Finalization...')

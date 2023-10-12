@@ -143,6 +143,21 @@ ForecastUI <- function(id) {
           withSpinner(plotlyOutput(ns('boxplot_region')), color = '#2C3E50')
         )
       )
+    ),
+    box(
+      width = 12,
+      title = '',
+      solidHeader = TRUE,
+      fluidRow(
+        column(
+          width = 6,
+          withSpinner(dataTableOutput(ns('object_dists')), color = '#2C3E50')
+        ),
+        column(
+          width = 6,
+          withSpinner(dataTableOutput(ns('object_counts')), color = '#2C3E50')
+        )
+      )
     )
   )
 }

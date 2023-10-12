@@ -45,6 +45,68 @@ rename_districts <- function(x) {
   )
 }
 
+rename_objects <- function(x) {
+  case_when(
+    x == "College university" ~  "College/university",
+    x == "Public service" ~ "Police/fire department",
+    x == "School kindergarden" ~ "School/kindergarden",
+    x == "School kindergardens" ~ "Schools/kindergardens",
+    x == "Road cycleway" ~ "Cycleway",
+    x == "Road footway" ~ "Footway",
+    x == "Road primary" ~ "Primary road",
+    x == "Road secondary" ~ "Secondary road",
+    x == "Road tertiary" ~ "Tertiary road",
+    x == "Road service" ~ "Service road",
+    x == "Road residential" ~ "Residential road",
+    x == "Road track grade" ~ "Unpaved/gravel road",
+    x == "Road trunk" ~ "Autostrade",
+    x == "Cbd" ~ "Palace of Culture and Science (city center)",
+    x == "Temple catholic" ~ "Catholic temple",
+    x == "Temple other" ~ "Non-catholic temple",
+    x == "Industrials" ~ "Industrial objects",
+    TRUE ~ x
+  )
+}
+
+clear_dists <- function(df) {
+  df %>%
+    select(starts_with('dist_')) %>% 
+    pivot_longer(cols = colnames(.)) %>% 
+    mutate(
+      value = ifelse(name %in% c('dist_airport', 'dist_prison', 'dist_road_track_grade', 'dist_road_trunk', 'dist_river', 'dist_cbd'), value, exp(value)),
+      name = str_remove(name, 'dist_') %>% str_replace_all('_', ' ') %>% str_to_sentence()
+    ) %>% 
+    mutate(
+      name = rename_objects(name),
+      value = round(value, -1)
+    ) %>% 
+    arrange(name) %>% 
+    `colnames<-`(c('Object', 'Distance, m')) %>% 
+    datatable(
+      rownames = FALSE
+    )
+}
+
+clear_counts <- function(df) {
+  df %>%
+    select(ends_with('_800')) %>% 
+    pivot_longer(cols = colnames(.)) %>% 
+    mutate(
+      value = ifelse(name %in% c('bus_stops_800', 'industrials_800', 'playgrounds_800', 'sport_objects_800'), value, exp(value)),
+      name = str_remove(name, '_800') %>% str_replace_all('_', ' ') %>% str_to_sentence()
+    ) %>% 
+    mutate(
+      name = rename_objects(name),
+      value = round(value, 0)
+    ) %>% 
+    arrange(name) %>% 
+    `colnames<-`(c('Object', 'Number of objects within 2 sq. km.')) %>% 
+    datatable(
+      rownames = FALSE
+    )
+}
+
+# calculate distances and dataset for the model ----
 calc_dist_river <- function(x, y, river) {
   ref_x <- river %>% pull(x)
   ref_y <- river %>% pull(y)
@@ -248,4 +310,27 @@ show_box_region <- function(df, reg_sel) {
       paper_bgcolor = '#F5F5F5',
       plot_bgcolor = '#F5F5F5'
     )
+}
+
+show_price_comparison_box_total <- function(df, corrected_price) {
+  warsaw_perc <- round(length(df$y[df$y<corrected_price])/length(df$y)*100, 2)
+  icon_warsaw <- ifelse(warsaw_perc > 60, 'balance-scale-left', ifelse(warsaw_perc < 40, 'balance-scale-right', 'balance-scale'))
+  valueBox(
+    value = paste0(warsaw_perc, '%'),
+    subtitle = 'of flats in Warsaw costs less then the selected property',
+    icon = icon(icon_warsaw),
+    color = 'light-blue'
+  )
+}
+
+show_price_comparison_box <- function(df, corrected_price, region_calc) {
+  prices_restricted <- df %>% filter(region == region_calc) %>% .$y
+  region_perc <- round(length(prices_restricted[prices_restricted<corrected_price])/length(prices_restricted)*100, 2)
+  icon_region <- ifelse(region_perc > 60, 'balance-scale-left', ifelse(region_perc < 40, 'balance-scale-right', 'balance-scale'))
+  valueBox(
+    value = paste0(region_perc, '%'),
+    subtitle = glue::glue('of flats in {str_replace(region_calc, "_", " ")} costs less then the selected property'),
+    icon = icon(icon_region),
+    color = 'light-blue'
+  )
 }
