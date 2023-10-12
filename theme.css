@@ -1,0 +1,33 @@
+/ * header title font */
+
+.main-header .logo {
+  font-family: "Georgia", Times, "Times New Roman", serif;
+  font-weight: bold;
+  font-sie: 24px;
+}
+  
+.leaflet-container {
+  cursor: auto !important;
+}
+
+#expr-container label {
+  font-weight: 400;
+}
+
+.js-irs-blue .irs-single, .js-irs-blue .irs-bar-edge, .js-irs-blue .irs-bar {
+  background: #FEAB3A;
+  border-top-color: #FEAB3A;
+  border-bottom-color: #FEAB3A;
+  border-left-color: #FEAB3A;
+  border-right-color: #FEAB3A;
+}
+
+.small-box.bg-blue {
+  background-color: #2C3E50 !important;
+  color: white !important;
+}
+
+.small-box.bg-light-blue {
+  background-color: #bdc3c7 !important;
+  color: white !important;
+}
