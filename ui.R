@@ -1,3 +1,16 @@
+Sys.setenv(lang = "en_US")
+options(shiny.sanitize.errors = FALSE, scipen = 999, dplyr.summarise.inform = FALSE)#warn = -1, 
+rm(list = ls())
+#setwd('C:/Projects/wappapp/')
+setwd('/srv/connect/apps/wappapp/')
+files_to_exclude <- c('app.R', 'theme.css', 'wappapp.png', 'README.md', 'ui.R')
+
+for (i in list.files(recursive = TRUE)) {
+  if (!i %in% files_to_exclude & !stringr::str_detect(i, 'data\\/')) {
+    source(i)
+  }
+}
+
 ui <- tagList(dashboardPage(
   dashboardHeader(
     title = 'Warsaw Apartments Helper',
