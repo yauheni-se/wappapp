@@ -3,7 +3,7 @@ options(shiny.sanitize.errors = FALSE, scipen = 999, dplyr.summarise.inform = FA
 rm(list = ls())
 #setwd('C:/Projects/wappapp/')
 setwd('/srv/connect/apps/wappapp/')
-files_to_exclude <- c('app.R', 'theme.css', 'wappapp.png', 'README.md', 'ui.R')
+files_to_exclude <- c('theme.css', 'wappapp.png', 'README.md', 'ui.R')
 
 for (i in list.files(recursive = TRUE)) {
   if (!i %in% files_to_exclude & !stringr::str_detect(i, 'data\\/')) {
@@ -15,8 +15,8 @@ ui <- tagList(dashboardPage(
   dashboardHeader(
     title = 'Warsaw Apartments Helper',
     titleWidth = 300,
-    tags$li(a(href = 'https://www.linkedin.com/in/yauheni-semianiuk', icon("linkedin"), title = "", target="_blank"), class = "dropdown"),
-    tags$li(a(href = 'https://github.com/yauheni-se', icon("github"), title = "", target="_blank"), class = "dropdown")
+    tags$li(a(href = 'https://www.linkedin.com/in/yauheni-semianiuk', icon("linkedin"), title = "", target = "_blank"), class = "dropdown"),
+    tags$li(a(href = 'https://github.com/yauheni-se/wappapp', icon("github"), title = "", target = "_blank"), class = "dropdown")
   ),
   dashboardSidebar(
     sidebarMenu(

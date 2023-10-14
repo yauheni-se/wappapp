@@ -1,6 +1,4 @@
 # general ----
-create_img_text <- function(url, text, width=20, height=15) {HTML(paste(tags$img(src=url, width=width, height=height), text))}
-
 psum <- function(..., na.rm=TRUE) {rowSums(do.call(cbind, list(...)), na.rm=na.rm)}
 
 # for data preparation ----
@@ -24,25 +22,6 @@ prepare_df_vis <- function(x, correction_rate) {
     ) %>% 
     filter(value == 1) %>% 
     dplyr::select(-c(name, value))
-}
-
-rename_districts <- function(x) {
-  case_when(
-    x == 'Żoliborz' ~ 'Zoliborz',
-    x == 'Praga-Południe' ~ 'Praga_Poludnie',
-    x == 'Mokotów' ~ 'Mokotow',
-    x == 'Wilanów' ~ 'Wilanow',
-    x == 'Wesoła' ~ 'Wesola',
-    x == 'Włochy' ~ 'Wlochy',
-    x == 'Ursynów' ~ 'Ursynow',
-    x == 'Śródmieście' ~ 'Srodmiejscie',
-    x == 'Praga-Północ' ~ 'Praga_Polnoc',
-    x == 'Targówek' ~ 'Targowek',
-    x == 'Rembertów' ~ 'Rembertow',
-    x == 'Białołęka' ~ 'Bialolenka',
-    x == '' ~ '',
-    TRUE ~ x
-  )
 }
 
 rename_objects <- function(x) {
@@ -100,13 +79,13 @@ clear_counts <- function(df) {
       value = round(value, 0)
     ) %>% 
     arrange(name) %>% 
-    `colnames<-`(c('Object', 'Number of objects within 2 sq. km.')) %>% 
+    `colnames<-`(c('Object', 'Number of objects within 10 minutes walk')) %>% 
     datatable(
       rownames = FALSE
     )
 }
 
-# calculate distances and dataset for the model ----
+# for distances calculation and dataset (for the model) creation ----
 calc_dist_river <- function(x, y, river) {
   ref_x <- river %>% pull(x)
   ref_y <- river %>% pull(y)
