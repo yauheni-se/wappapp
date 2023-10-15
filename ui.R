@@ -3,10 +3,10 @@ options(shiny.sanitize.errors = FALSE, scipen = 999, dplyr.summarise.inform = FA
 rm(list = ls())
 setwd('C:/Projects/wappapp/')
 #setwd('/srv/connect/apps/wappapp/')
-files_to_exclude <- c('theme.css', 'wappapp.png', 'README.md', 'ui.R', "rsconnect/shinyapps.io/yauheni-se/wappapp.dcf")
+files_to_exclude <- c('theme.css', 'README.md', 'ui.R', "rsconnect/shinyapps.io/yauheni-se/wappapp.dcf")
 
 for (i in list.files(recursive = TRUE)) {
-  if (!i %in% files_to_exclude & !stringr::str_detect(i, 'data\\/')) {
+  if (!i %in% files_to_exclude & !stringr::str_detect(i, 'data\\/|img\\/')) {
     source(i, encoding = 'UTF-8')
   }
 }
