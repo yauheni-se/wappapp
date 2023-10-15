@@ -16,3 +16,7 @@ library(dashboardthemes)
 library(plotly)
 library(leaflet)
 library(DT)
+
+# web scrapping
+library(httr)
+library(rvest)
