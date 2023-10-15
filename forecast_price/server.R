@@ -14,7 +14,7 @@ Forecast <- function(id) {
       output$map <- renderLeaflet(
         regions %>% 
           leaflet(options = leafletOptions(attributionControl=FALSE)) %>% 
-          addProviderTiles(providers$Stadia.OSMBright) %>% 
+          addProviderTiles(providers$OpenStreetMap.Mapnik) %>% 
           addPolygons(
             stroke = 0.5,
             opacity = 1,
@@ -40,7 +40,7 @@ Forecast <- function(id) {
         output$map <- renderLeaflet(
           regions %>% 
             leaflet(options = leafletOptions(attributionControl=FALSE)) %>% 
-            addProviderTiles(providers$Stadia.OSMBright) %>% 
+            addProviderTiles(providers$OpenStreetMap.Mapnik) %>% 
             addPolygons(
               stroke = 0.5,
               opacity = 1,
