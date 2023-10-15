@@ -93,16 +93,24 @@ clear_offer <- function(offer_detailed) {
 }
 
 clear_flat <- function(flat) {
-  flat %>% 
+  flat <- flat %>% 
     rename(area = m) %>%
     mutate(
       features_lst = list(clean_letters(features)),
       floor = str_remove(floor_no, "floor\\_"),
-      ownership = switch_owner(building_ownership),
       street = ifelse(street_number == "", street_name, paste0(street_name, ", ", street_number))
     ) %>% 
-    select(-c(floor_no, building_ownership, features, features2, street_name, street_number)) %>% 
+    select(-c(floor_no, features, features2, street_name, street_number)) %>% 
     select(-any_of(c("p_bmaterial", "p_btype", "p_bwindows", "p_rooms", "p_parking")))
+  
+  if ('building_ownership' %in% colnames(flat)) {
+    flat <- flat %>% 
+      mutate(
+        ownership = switch_owner(building_ownership),
+        .keep = 'unused'
+      )
+  }
+  return(flat)
 }
 
 # for visualizations ----
@@ -137,16 +145,21 @@ rename_features <- function(x) {
 }
 
 show_main <- function(df) {
-  df %>% 
+  df <- df %>% 
     select(any_of(c('price', 'area', 'price_per_m', 'floor', 'rooms_num', 'market', 'ownership', 'street', 'district', 'city'))) %>% 
     rename(
-      `Price per sq.m.` = price_per_m,
-      `Number of rooms` = rooms_num
+      `Price per sq.m.` = any_of(c('price_per_m')),
+      `Number of rooms` = any_of(c('rooms_num'))
     ) %>% 
     mutate(
       price = format(as.numeric(price), big.mark = " "),
-      `Price per sq.m.` = format(as.numeric(`Price per sq.m.`), big.mark = " ")
-    ) %>% 
+    ) 
+  
+  if ('Price per sq.m.' %in% colnames(df)) {
+    df <- df %>% mutate(`Price per sq.m.` = format(as.numeric(`Price per sq.m.`), big.mark = " "))
+  }
+  
+  df %>% 
     pivot_longer(cols = colnames(.)) %>% 
     mutate(
       name = str_to_sentence(name),
