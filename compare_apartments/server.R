@@ -9,6 +9,10 @@ Comparison <- function(id) {
       prev_next_1 <<- 1
       prev_next_2 <<- 1
       prev_next_3 <<- 1
+      lapply(1:3, function(i) {
+        shinyjs::hide(paste0('prev_', i))
+        shinyjs::hide(paste0('next_', i))
+      })
       
       # Compare apartments button ----
       observeEvent(input$compare_apartments, {
@@ -62,12 +66,16 @@ Comparison <- function(id) {
             output[[paste0('table_features_', i)]] <- renderDataTable(flats[[i]] %>% show_features())
             output[[paste0('table_description_', i)]] <- renderDataTable(flats[[i]] %>% show_description())
             output[[paste0('image_', i)]] <- renderText({c('<img src="', flats[[i]]$images[[1]][1], '" width="710" height="600">')})
+            shinyjs::show(paste0('prev_', i))
+            shinyjs::show(paste0('next_', i))
           } else {
             output[[paste0('table_main_', i)]] <- renderDataTable(datatable(tibble()))
             output[[paste0('table_additional_', i)]] <- renderDataTable(datatable(tibble()))
             output[[paste0('table_features_', i)]] <- renderDataTable(datatable(tibble()))
             output[[paste0('table_description_', i)]] <- renderDataTable(datatable(tibble()))
             output[[paste0('image_', i)]] <- renderText({})
+            shinyjs::hide(paste0('prev_', i))
+            shinyjs::hide(paste0('next_', i))
           }
         })
         # finalization ----
