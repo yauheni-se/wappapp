@@ -95,22 +95,25 @@ clear_offer <- function(offer_detailed) {
 clear_flat <- function(flat) {
   flat <- flat %>% 
     rename(area = m) %>%
-    mutate(
-      features_lst = list(clean_letters(features)),
-      floor = str_remove(floor_no, "floor\\_"),
-      street = ifelse(street_number == "", street_name, paste0(street_name, ", ", street_number))
-    ) %>% 
-    select(-c(floor_no, features, features2, street_name, street_number)) %>% 
-    select(-any_of(c("p_bmaterial", "p_btype", "p_bwindows", "p_rooms", "p_parking")))
+    mutate(features_lst = list(clean_letters(features)))
+  
+  if ('floor_no' %in% colnames(flat)) {
+    flat <- flat %>% mutate(floor = str_remove(floor_no, "floor\\_") %>% str_replace('_', ' '))
+  }
+  
+  if ('street_number' %in% colnames(flat)) {
+    flat <- flat %>% mutate(street = ifelse(street_number == "", street_name, paste0(street_name, ", ", street_number)))
+  } else {
+    flat <- flat %>% rename(street = any_of('street_name'))
+  }
   
   if ('building_ownership' %in% colnames(flat)) {
-    flat <- flat %>% 
-      mutate(
-        ownership = switch_owner(building_ownership),
-        .keep = 'unused'
-      )
+    flat <- flat %>% mutate(ownership = switch_owner(building_ownership), .keep = 'unused')
   }
-  return(flat)
+  
+  flat %>% 
+    select(-any_of(c("floor_no", "features", "features2", "street_name", "street_number"))) %>% 
+    select(-any_of(c("p_bmaterial", "p_btype", "p_bwindows", "p_rooms", "p_parking")))
 }
 
 # for visualizations ----
