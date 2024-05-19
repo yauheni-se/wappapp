@@ -31,3 +31,35 @@
   background-color: #bdc3c7 !important;
   color: white !important;
 }
+
+.nav-tabs-custom>.nav-tabs {
+  margin: 0;
+  border-radius: 0px;
+}
+
+.nav-tabs-custom>.nav-tabs>li>a {
+  color: white;
+  font-size: 16px;
+  background-color: #2C3E50;
+}
+
+.nav-tabs-custom .nav-tabs li.active a {
+  background: #FEAB3A;
+  color: white;
+}
+
+.nav-tabs-custom, .nav-tabs-custom>.tab-content, .nav-tabs-custom>.nav-tabs {
+  background: #f4f4f4;
+  border-bottom-color: #f4f4f4;
+}
+
+.nav-tabs-custom>.nav-tabs>li.active:hover>a, .nav-tabs-custom>.nav-tabs>li.active>a {
+  font-size: 16px;
+  border-radius: 0px;
+}
+
+.nav-tabs-custom, .nav-tabs-custom .nav-tabs li.active:hover a, .nav-tabs-custom .nav-tabs li.active a {
+  background: rgb(254 171 58);
+  color: rgb(33,37,41);
+  border-radius: 0px;
+}

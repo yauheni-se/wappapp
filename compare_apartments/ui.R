@@ -19,7 +19,7 @@ ComparisonUI <- function(id) {
         ),
         column(
           width = 4,
-          textInput(ns('url3'), 'Link 3', value = 'https://www.otodom.pl/pl/oferta/2-pokojowe-mieszkanie-50m2-loggia-ID4kHIk')
+          textInput(ns('url3'), 'Link 3', value = 'https://www.otodom.pl/pl/oferta/jedyny-taki-apartament-2pok-gabinet-jak-nowy-ID4qsDF')
         )
       ),
       fluidRow(

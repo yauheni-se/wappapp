@@ -14,6 +14,10 @@ Comparison <- function(id) {
         shinyjs::hide(paste0('next_', i))
       })
       
+      # Click button for the first time ----
+      shinyjs::click("comparison-compare_apartments", asis = TRUE)
+      
+      
       # Compare apartments button ----
       observeEvent(input$compare_apartments, {
         # download pages ----

@@ -47,43 +47,6 @@ rename_objects <- function(x) {
   )
 }
 
-clear_dists <- function(df) {
-  df %>%
-    select(starts_with('dist_')) %>% 
-    pivot_longer(cols = colnames(.)) %>% 
-    mutate(
-      value = ifelse(name %in% c('dist_airport', 'dist_prison', 'dist_road_track_grade', 'dist_road_trunk', 'dist_river', 'dist_cbd'), value, exp(value)),
-      name = str_remove(name, 'dist_') %>% str_replace_all('_', ' ') %>% str_to_sentence()
-    ) %>% 
-    mutate(
-      name = rename_objects(name),
-      value = round(value, -1)
-    ) %>% 
-    arrange(name) %>% 
-    `colnames<-`(c('Object', 'Distance, m')) %>% 
-    datatable(
-      rownames = FALSE
-    )
-}
-
-clear_counts <- function(df) {
-  df %>%
-    select(ends_with('_800')) %>% 
-    pivot_longer(cols = colnames(.)) %>% 
-    mutate(
-      value = ifelse(name %in% c('bus_stops_800', 'industrials_800', 'playgrounds_800', 'sport_objects_800'), value, exp(value)),
-      name = str_remove(name, '_800') %>% str_replace_all('_', ' ') %>% str_to_sentence()
-    ) %>% 
-    mutate(
-      name = rename_objects(name),
-      value = round(value, 0)
-    ) %>% 
-    arrange(name) %>% 
-    `colnames<-`(c('Object', 'Number of objects within 10 minutes walk')) %>% 
-    datatable(
-      rownames = FALSE
-    )
-}
 
 # for distances calculation and dataset (for the model) creation ----
 calc_dist_river <- function(x, y, river) {
@@ -253,44 +216,13 @@ create_new_flat <- function(
   return(flat)
 }
 
+filter_dist_800 <- function(x, y, o_type, objects) {
+  ref_x <- objects %>% filter(object_type == o_type) %>% pull(x)
+  ref_y <- objects %>% filter(object_type == o_type) %>% pull(y)
+  mapply(calc_geo_dist, ref_x, ref_y, MoreArgs = list(x=x, y=y), USE.NAMES = FALSE, SIMPLIFY = TRUE)
+}
+
 # for visualization ----
-show_box_total <- function(df) {
-  df %>% 
-    plot_ly(
-      y =~ y,
-      type= 'box',
-      name = 'price per sq. m.',
-      boxmean = TRUE,
-      color = I('#2C3E50')
-    ) %>% 
-    layout(
-      title = 'Price per sq. m. distrbution in Warsaw, zl',
-      yaxis = list(zeroline=FALSE, title = '', mirror = TRUE, linecolor = '#2C3E50'),
-      xaxis = list(zeroline=FALSE, title = '', mirror = TRUE, linecolor = '#2C3E50'),
-      paper_bgcolor = '#F5F5F5',
-      plot_bgcolor = '#F5F5F5'
-    )
-}
-
-show_box_region <- function(df, reg_sel) {
-  df %>% 
-    filter(region == reg_sel) %>% 
-    plot_ly(
-      y =~ y,
-      type= 'box',
-      name = 'price per sq. m.',
-      boxmean = TRUE,
-      color = I('#2C3E50')
-    ) %>% 
-    layout(
-      title = glue::glue('Price per sq. m. distrbution in selected district ({str_replace(reg_sel, "_", " ")}), zl'),
-      yaxis = list(zeroline=FALSE, title = '', mirror = TRUE, linecolor = '#2C3E50'),
-      xaxis = list(zeroline=FALSE, title = '', mirror = TRUE, linecolor = '#2C3E50'),
-      paper_bgcolor = '#F5F5F5',
-      plot_bgcolor = '#F5F5F5'
-    )
-}
-
 show_price_comparison_box_total <- function(df, corrected_price) {
   warsaw_perc <- round(length(df$y[df$y<corrected_price])/length(df$y)*100, 2)
   icon_warsaw <- ifelse(warsaw_perc > 60, 'balance-scale-left', ifelse(warsaw_perc < 40, 'balance-scale-right', 'balance-scale'))
@@ -298,18 +230,275 @@ show_price_comparison_box_total <- function(df, corrected_price) {
     value = paste0(warsaw_perc, '%'),
     subtitle = 'of flats in Warsaw costs less then the selected property',
     icon = icon(icon_warsaw),
-    color = 'light-blue'
+    color = 'blue'
   )
 }
 
 show_price_comparison_box <- function(df, corrected_price, region_calc) {
-  prices_restricted <- df %>% filter(region == region_calc) %>% .$y
+  prices_restricted <- df %>% filter(reg == region_calc) %>% .$y
   region_perc <- round(length(prices_restricted[prices_restricted<corrected_price])/length(prices_restricted)*100, 2)
   icon_region <- ifelse(region_perc > 60, 'balance-scale-left', ifelse(region_perc < 40, 'balance-scale-right', 'balance-scale'))
   valueBox(
     value = paste0(region_perc, '%'),
     subtitle = glue::glue('of flats in {str_replace(region_calc, "_", " ")} costs less then the selected property'),
     icon = icon(icon_region),
-    color = 'light-blue'
+    color = 'blue'
   )
+}
+
+show_hist_by_regs <- function(df_vis, col_to_show) {
+  plt_lst <- list()
+  df_vis$y <- df_vis[[col_to_show]]
+  
+  regions_vec <- df_vis$region %>% unique() %>% sort()
+  for (i in seq_along(regions_vec)) {
+    plt_lst[[i]] <- df_vis %>% 
+      filter(region == regions_vec[i]) %>% 
+      filter(area <= 600) %>% 
+      plot_ly(
+        x =~ y, name =~ region,
+        height = 1000,
+        type = 'histogram', nbinsx = 80,
+        showlegend = FALSE,
+        marker = list(line = list(color="black", width = 1))
+      ) %>% 
+      layout(
+        xaxis = list(title = ''),
+        yaxis = list(title = list(text = regions_vec[i], font = list(size = 10)), zeroline = TRUE)
+      )
+  }
+  subplot(plt_lst, nrows = 6, shareX = FALSE, titleY = TRUE)
+}
+
+show_dist_by_regs <- function(df_vis, col_to_show) {
+  df_vis$y <- df_vis[[col_to_show]]
+  title_sel <- if (col_to_show == 'y') {
+    'Price per square meter, zl'
+  } else {
+    'Apartment size, square meters'
+  }
+  df_vis %>% 
+    filter(area <= 600) %>% 
+    plot_ly(
+      x =~ y, name =~ region,
+      height = 1000,
+      type = 'violin',
+      box = list(visible = TRUE),
+      meanline = list(visible = TRUE)
+    ) %>% 
+    layout(
+      showlegend = FALSE,
+      xaxis = list(hoverformat = ",.0f", title = title_sel),
+      yaxis = list(title = '')
+    )
+}
+
+show_dist <- function(df_vis, col_to_show) {
+  df_vis$y <- df_vis[[col_to_show]]
+  title_sel <- if (col_to_show == 'y') {
+    'Price per square meter, zl'
+  } else {
+    'Apartment size, square meters'
+  }
+  df_vis %>% 
+    filter(area <= 600) %>% 
+    plot_ly(
+      height = 1000,
+      x =~ y,
+      type = 'histogram', nbinsx = 500,
+      marker = list(line = list(color="black", width = 1)),
+      hovertemplate = 'Apartment size range: %{x} <br> Number of apartments within the range: %{y}',
+      name = " "
+    ) %>% 
+    layout(
+      showlegend = FALSE,
+      yaxis = list(hoverformat = ",.0f", title = 'Number of apartments'),
+      xaxis = list(title = title_sel)
+    )
+}
+
+show_dist_to_objects <- function(flat) {
+  dff <- flat %>%
+    select(starts_with('dist_')) %>% 
+    pivot_longer(cols = colnames(.)) %>% 
+    mutate(
+      value = ifelse(name %in% c('dist_airport', 'dist_prison', 'dist_road_track_grade', 'dist_road_trunk', 'dist_river', 'dist_cbd'), value, exp(value)),
+      name = str_remove(name, 'dist_') %>% str_replace_all('_', ' ') %>% str_to_sentence()
+    ) %>% 
+    mutate(
+      name = rename_objects(name),
+      value = round(value, -1)
+    ) %>% 
+    arrange(desc(value)) %>% 
+    mutate(id = row_number())
+  
+  plt <- plot_ly(height = 1000)
+  for (i in 1:nrow(dff)) {
+    plt <- plt %>% 
+      add_trace(
+        y = rep(dff$id[i], 2),
+        x = c(0, dff$value[i]),
+        hovertemplate = paste0(
+          'Object: ', dff$name[i], '<br>',
+          'Distance: ', dff$value[i], 'm', '<br>'
+        ),
+        name = ' ',
+        mode =  'lines+markers',
+        showlegend = FALSE,
+        type = 'scatter',
+        mode = 'lines+markers',
+        line = list(color = '#FEAB39', width = 3),
+        marker = list(color = '#2C3E50', size = 7)
+      )
+  }
+  plt %>%
+    layout(
+      yaxis = list(
+        ticktext = dff$name, 
+        tickvals = dff$id,
+        tickmode = "array",
+        title = ''
+      ),
+      xaxis = list(
+        title = 'Distance between an apartment and an object, meters'
+      )
+    )
+}
+
+show_count_of_objects <- function(flat) {
+  dff <- flat %>%
+    select(ends_with('_800')) %>% 
+    pivot_longer(cols = colnames(.)) %>% 
+    mutate(
+      value = ifelse(name %in% c('bus_stops_800', 'industrials_800', 'playgrounds_800', 'sport_objects_800'), value, exp(value)),
+      name = str_remove(name, '_800') %>% str_replace_all('_', ' ') %>% str_to_sentence()
+    ) %>% 
+    mutate(
+      name = rename_objects(name),
+      value = round(value, 0)
+    ) %>% 
+    arrange(name)
+  
+  dff %>% 
+    plot_ly(
+      x =~ reorder(name, desc(value)),
+      y =~ value,
+      height = 1000,
+      text = ~ value,
+      type = 'bar',
+      name = ' ',
+      #marker = list(color = '#f4f4f4'),
+      hovertemplate = 'there are <b>%{y}</b> %{x} within 800 meters from an apartment'
+    ) %>% 
+    layout(
+      xaxis = list(title = 'Type of object'),
+      yaxis = list(title = 'Count of objects within 800 meters from an apartment')
+    )
+}
+
+show_mean_price <- function(regions, df_vis, primary) {
+  regions_vis <- regions
+  regions_vis@data <- regions_vis@data %>% 
+    left_join(
+      df_vis %>% 
+        filter(is_market_primary == primary) %>% 
+        rename(nazwa_dzie = reg) %>% 
+        group_by(region, nazwa_dzie) %>% 
+        summarise(
+          y = mean(y, na.rm = TRUE) %>% round(0),
+          area = mean(area, na.rm = TRUE) %>% round(1)
+        ) %>% 
+        ungroup(),
+      by = 'nazwa_dzie'
+    )
+  
+  regions_vis@data <- regions_vis@data %>% 
+    bind_cols(
+      data.frame(rgeos::gCentroid(regions_vis, byid=TRUE)) %>% 
+        as_tibble() %>% 
+        rename(center_x = x, center_y = y)
+    )
+  
+  regions_vis %>% 
+    leaflet(height = 1000, options = leafletOptions(attributionControl=FALSE)) %>% 
+    addProviderTiles(providers$OpenStreetMap.Mapnik, options = providerTileOptions(minZoom = 11, maxZoom = 11)) %>% 
+    addPolygons(
+      fillColor = "#2C3E50",
+      fillOpacity = 0.8,
+      color = "black",
+      weight = 0.8,
+      smoothFactor = 0.8,
+      label = paste0(
+        "District: ", regions_vis$region, "<br/>",
+        "Mean price per square meter: ", format(regions_vis$y, big.mark = " "), " zl <br/>"
+      ) %>% lapply(htmltools::HTML),
+      labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"), texsize = "13px", direction = "auto")
+    ) %>%
+    addLabelOnlyMarkers(
+      lng = regions_vis$center_x,
+      lat = regions_vis$center_y,
+      label = format(regions_vis$y, big.mark = " "),
+      labelOptions = labelOptions(
+        noHide = TRUE,
+        direction = 'auto',
+        textOnly = TRUE,
+        textsize = "12px",
+        style = list("color" = "white", "font-style" = "bold", "background-color" = "#53626D", "padding" = "0px")
+      )
+    ) %>% 
+    setView(lng = 21.05, lat = 52.23, zoom = 11)
+}
+
+create_map_within_800 <- function(objects, lon, lat) {
+  flat <- tibble(x = lon, y = lat)
+  objects_filtered <- tibble()
+  object_types <- objects %>% filter(!str_detect(object_type, "road_|tree")) %>% .$object_type %>% unique() %>% sort()
+  for (j in object_types) {
+    distances <- mapply(filter_dist_800, flat$x, flat$y, MoreArgs = list(o_type = j, objects = objects))
+    objects_filtered <- objects_filtered %>% 
+      bind_rows(
+        objects %>% filter(object_type == j) %>% mutate(distance = distances[, 1]) %>% filter(distance <= 800)
+      )
+  }
+  
+  make_lst <- function (...) {
+    res <- lapply(object_types, function(x) {makeIcon(iconUrl = paste0("data/icons/", x, ".png"), iconWidth = 16, iconHeight = 16)})
+    names(res) <- object_types
+    res <- structure(res, class = "leaflet_icon_set")
+    cls <- unlist(lapply(res, inherits, "leaflet_icon"))
+    res
+  }
+  icon_set <- make_lst()
+  
+  objects_filtered %>% 
+    leaflet(height = 1000, options = leafletOptions(attributionControl=FALSE)) %>% 
+    addProviderTiles(providers$Stadia.AlidadeSmooth) %>%    # providers$OpenStreetMap.Mapnik
+    addCircles(
+      lng = flat$x,
+      lat = flat$y,
+      radius = 800,
+      color = '#2C3E50'
+    ) %>% 
+    addMarkers(
+      lng =~ x,
+      lat =~ y,
+      icon =~ icon_set[object_type],
+      label = paste0(
+        "Type: ", objects_filtered$object_type, "<br/>",
+        "Name: ", objects_filtered$object_name, "<br/>",
+        "Region: ", objects_filtered$region, "<br/>",
+        "Distance from an apartment, meters: ", round(objects_filtered$distance, 0), "<br/>"
+      ) %>% lapply(htmltools::HTML),
+      labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"), texsize = "13px", direction = "auto")
+    ) %>%
+    addCircleMarkers(
+      lng = flat$x,
+      lat = flat$y,
+      radius = 5,
+      color = '#FEAB3A',
+      stroke = FALSE,
+      fillOpacity = 1,
+      label = 'Selected apartment',
+      labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"), texsize = "13px", direction = "auto")
+    )
 }

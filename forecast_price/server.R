@@ -61,19 +61,26 @@ Forecast <- function(id) {
         )
       })
       
+      # click button for the first time ----
+      shinyjs::click("forecast-forecast_price", asis = TRUE)
+      
       # calculate price ----
       observeEvent(input$forecast_price, {
-        # presets ----
+        # read data ----
         shinyjs::show('progress_bar_row')
         
         last_click <- isolate(as.data.frame(input$map_click))
         if (nrow(last_click)==0) {last_click <- tibble(lng = 21.05, lat = 52.23)}
         
-        objects <- data.table::fread("data/objects.csv") %>% as_tibble()
+        objects <- read_rds('data/objects.rds')#data.table::fread("data/objects.csv") %>% as_tibble()
         river <- data.table::fread("data/river.csv") %>% as_tibble()
         cbd <- data.table::fread("data/cbd.csv") %>% as_tibble()
         df <- data.table::fread("data/df.csv") %>% as_tibble()
         best_model <- lightgbm::readRDS.lgb.Booster('data/best_model.rds')
+        df_orig <- read_rds("data/df_orig.rds") %>% 
+          filter(area <= 17000) %>% 
+          filter(!floor_no %in% c("cellar", "garret"))
+
         
         # check location ----
         updateProgressBar(session = session, id = 'progress_bar', value = 0, title = 'Assigning district to the selected location...')
@@ -109,34 +116,49 @@ Forecast <- function(id) {
             cbd = cbd,
             lon = last_click$lng,
             lat = last_click$lat,
-            area = isolate(input$area),
-            is_kitchen_separate = isolate(input$is_kitchen_separate),
-            is_closed_territory = isolate(input$is_closed_territory),
-            is_domophone = isolate(input$is_domophone),
-            is_security = isolate(input$is_security),
-            is_furniture = isolate(input$is_furniture),
-            is_air_cond = isolate(input$is_air_cond),
-            is_balcony = isolate(input$is_balcony),
-            is_basement = isolate(input$is_basement),
-            is_garage = isolate(input$is_garage),
-            is_elevator = isolate(input$is_elevator),
-            is_phone = isolate(input$is_phone),
-            is_security_windows = isolate(input$is_security_windows),
-            is_terrace = isolate(input$is_terrace),
-            is_utility_room = isolate(input$is_utility_room),
-            is_alarm = isolate(input$is_alarm),
-            is_garden = isolate(input$is_garden),
-            is_remote_service = isolate(input$is_remote_service),
             is_first_time = 1L,
-            is_kitchen_fursnished = isolate(input$is_kitchen_fursnished),
-            is_media = isolate(input$is_media),
-            is_market_primary = isolate(input$is_market_primary),
-            is_building_concrete = isolate(input$is_building_concrete),
-            is_heating_urban = isolate(input$is_heating_urban),
-            is_to_renovation = isolate(input$is_to_renovation),
-            is_ownership_full = isolate(input$is_ownership_full),
             region = region_calc,
+            # main
+            is_market_primary = isolate(as.integer(!is.null(input$main) && "Primary market" %in% input$main)),
+            is_ownership_full = isolate(as.integer(!is.null(input$main) && "Full ownership" %in% input$main)),
+            is_to_renovation = isolate(as.integer(!is.null(input$main) && "Needs renovation" %in% input$main)),
+            
+            # type of flat
             building_type = isolate(input$building_type),
+            
+            # interior
+            is_furniture = isolate(as.integer(!is.null(input$interior) && 'Furniture' %in% input$interior)),
+            is_kitchen_fursnished = isolate(as.integer(!is.null(input$interior) && 'Furniture in kitchen' %in% input$interior)),
+            is_kitchen_separate = isolate(as.integer(!is.null(input$interior) && 'Separated kitchen' %in% input$interior)),
+            is_air_cond = isolate(as.integer(!is.null(input$interior) && 'Air conditioner' %in% input$interior)),
+            is_phone = isolate(as.integer(!is.null(input$interior) && 'Phone' %in% input$interior)),
+            is_media = isolate(as.integer(!is.null(input$interior) && 'Media' %in% input$interior)),
+            
+            # area
+            area = isolate(input$area),
+            
+            # exterior
+            is_balcony = isolate(as.integer(!is.null(input$exterior) && 'Balcony' %in% input$exterior)),
+            is_terrace = isolate(as.integer(!is.null(input$exterior) && 'Terrace' %in% input$exterior)),
+            is_garden = isolate(as.integer(!is.null(input$exterior) && 'Garden' %in% input$exterior)),
+            is_basement = isolate(as.integer(!is.null(input$exterior) && 'Basement' %in% input$exterior)),
+            is_garage = isolate(as.integer(!is.null(input$exterior) && 'Garage' %in% input$exterior)),
+            is_utility_room = isolate(as.integer(!is.null(input$exterior) && 'Utility room' %in% input$exterior)),
+ 
+            # safety
+            is_domophone = isolate(as.integer(!is.null(input$safety) && 'Domophone' %in% input$safety)),
+            is_alarm = isolate(as.integer(!is.null(input$safety) && 'Alarm system' %in% input$safety)),
+            is_security_windows = isolate(as.integer(!is.null(input$safety) && 'Security windows' %in% input$safety)),
+            is_remote_service = isolate(as.integer(!is.null(input$safety) && 'Remote service' %in% input$safety)),
+            is_closed_territory = isolate(as.integer(!is.null(input$safety) && 'Closed territory' %in% input$safety)),
+            is_security = isolate(as.integer(!is.null(input$safety) && 'Security' %in% input$safety)),
+            
+            # building
+            is_elevator = isolate(as.integer(!is.null(input$building) && 'Elevator' %in% input$building)),
+            is_building_concrete = isolate(as.integer(!is.null(input$building) && 'Urban heating' %in% input$building)),
+            is_heating_urban = isolate(as.integer(!is.null(input$building) && 'Concrete building' %in% input$building)),
+            
+            # additional
             windows_type = isolate(input$windows_type),
             floor_no = isolate(input$floor_no),
             building_floors_num = isolate(input$building_floors_num)
@@ -144,7 +166,7 @@ Forecast <- function(id) {
           flat <- flat %>% mutate(price_per_m = NA_real_) %>% dplyr::select(all_of(colnames(df)))
           
           # predict price ----
-          updateProgressBar(session = session, id = 'progress_bar', value = 85, title = 'Predicting price...')
+          updateProgressBar(session = session, id = 'progress_bar', value = 60, title = 'Predicting price...')
           Sys.sleep(2)
           
           varnames <- setdiff(colnames(df), c("price_per_m"))
@@ -154,16 +176,21 @@ Forecast <- function(id) {
           correction_rate <- 1+(isolate(input$perc_change)/100)
           corrected_price <- round(exp(forecasted_price)*correction_rate, 0)
           
-          # draw box plots ----
-          updateProgressBar(session = session, id = 'progress_bar', value = 95, title = 'Preparing visualizations...')
+          # prepare df for visualizations ----
+          updateProgressBar(session = session, id = 'progress_bar', value = 65, title = 'Preparing visualizations...')
           Sys.sleep(2)
           
-          df_vis <- prepare_df_vis(df, correction_rate)
-          
-          output$boxplot_total <- renderPlotly(show_box_total(df_vis))
-          output$boxplot_region <- renderPlotly(show_box_region(df_vis, region_calc))
+          df_vis <- prepare_df_vis(df, correction_rate) %>% 
+            mutate(
+              reg = region,
+              area = df_orig$area,
+              region = df_orig$region,
+              is_market_primary = df$is_market_primary
+            )
           
           # draw value boxes ----
+          # browser()
+          
           output$price_comparison_box_total <- renderValueBox(show_price_comparison_box_total(df_vis, corrected_price))
           
           output$price_comparison_box <- renderValueBox(show_price_comparison_box(df_vis, corrected_price, region_calc))
@@ -171,7 +198,7 @@ Forecast <- function(id) {
           output$price_box <- renderValueBox({
             valueBox(
               value = paste0(format(corrected_price, big.mark = " "), ' zl'),
-              subtitle = 'Price per sq.m.',
+              subtitle = 'Predicted price per square meter',
               icon = icon('pencil-alt'),
               color = 'blue'
             )
@@ -180,16 +207,30 @@ Forecast <- function(id) {
           output$price_box_total <- renderValueBox({
             valueBox(
               value = paste0(format(corrected_price*isolate(input$area), big.mark = " "), ' zl'),
-              subtitle = 'Total price',
+              subtitle = 'Predicted total price',
               icon = icon('building'),
               color = 'blue'
             )
           })
           
-          # list objects ----
-          output$object_dists <- renderDataTable(clear_dists(flat))
           
-          output$object_counts <- renderDataTable(clear_counts(flat))
+          # draw flat statistics ----
+          output$dist_to_objects <- renderPlotly(show_dist_to_objects(flat))
+          output$count_of_objects <- renderPlotly(show_count_of_objects(flat))
+          output$map_dist_to_objects <- renderLeaflet(create_map_within_800(objects, lon = isolate(last_click$lng), lat = isolate(last_click$lat)))
+          
+          # draw Warsaw statistics ----
+          output$price_dist <- renderPlotly(show_dist(df_vis, 'y'))
+          output$area_dist <- renderPlotly(show_dist(df_vis, 'area'))
+          
+          output$mean_price_prim <- renderLeaflet(show_mean_price(regions, df_vis, 1L))
+          output$mean_price_secd <- renderLeaflet(show_mean_price(regions, df_vis, 0L))
+
+          output$price_hist_by_regs <- renderPlotly(show_hist_by_regs(df_vis, 'y'))
+          output$area_hist_by_regs <- renderPlotly(show_hist_by_regs(df_vis, 'area'))
+          
+          output$price_dist_by_regs <- renderPlotly(show_dist_by_regs(df_vis, 'y'))
+          output$area_dist_by_regs <- renderPlotly(show_dist_by_regs(df_vis, 'area'))
           
         }
         # finalization ----
