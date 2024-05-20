@@ -107,7 +107,7 @@ Forecast <- function(id) {
           )
         } else {
           # calculate flat price ----
-          updateProgressBar(session = session, id = 'progress_bar', value = 5, title = 'Calculating distances to the nearby locations...')
+          updateProgressBar(session = session, id = 'progress_bar', value = 5, title = 'Calculating distances to the nearby locations, please wait a few minutes ...')
           Sys.sleep(2)
           
           flat <- create_new_flat(

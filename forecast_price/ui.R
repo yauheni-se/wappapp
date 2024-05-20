@@ -136,6 +136,15 @@ ForecastUI <- function(id) {
           )
         ),
         
+        br(),
+        br(),
+        br(),
+        br(),
+        br(),
+        br(),
+        br(),
+        br(),
+        
         fluidRow(
           column(
             width = 12,
